@@ -1,4 +1,4 @@
-## cluster file 
+## cluster file
 
 rm(list=ls())
 library(rstan)
@@ -15,7 +15,7 @@ taskid <- as.numeric(slurm_arrayid)
 #setwd("/home/irena/")
 ## set up the data simulation parameters:
 P = 2 # no of basis functions
-I = 300 # no of subjects ## increase subjects
+I = 200 # no of subjects ## increase subjects
 
 alpha <- c(0,-2)
 
@@ -75,27 +75,27 @@ x_pred <- drop(sim_x)
 B_design <- matrix(unlist(B), ncol=P, byrow=T)
 B_design = cbind(1, B_design)
 
-## unroll S into a design matrix: 
+## unroll S into a design matrix:
 S_design <- matrix(unlist(S), byrow=T)
 
 B_S_data = cbind(B_design, S_design)
 
 
-## set the true coefficient parameters for the means and variances 
+## set the true coefficient parameters for the means and variances
 beta_out <- c(5, 1, 2, -4)
 beta_time_out <- c(-1, 1, 0.5, -0.5)
 
 ran_eff_sigma <- 0.5
 ran_eff <- sapply(seq_along(1:I), function(i){rnorm(1, 0,ran_eff_sigma)})
-## get the mean of the outcome variable: 
+## get the mean of the outcome variable:
 mu_outcome = sapply(seq_along(1:N), function(n){
 B_S_data[ids[n],]%*%beta_out  + (B_S_data[ids[n],]%*%beta_time_out)*f_time_fmp[n,2]+ran_eff[ids[n]]
 })
 
-## set the variance of the outcome: 
+## set the variance of the outcome:
 outcome_sigma <- 0.1
 
-### generate the outcome data 
+### generate the outcome data
 sim_outcome <- sapply(seq_along(1:N), function(n){rnorm(1, mu_outcome[n],outcome_sigma)})
 
   sim_out  <- sampling(compiled_model,

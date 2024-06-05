@@ -6,40 +6,45 @@ library(dplyr)
 library(MASS)
 options(mc.cores = parallel::detectCores(logical= FALSE))
 rstan_options(auto_write = TRUE)
+slurm_arrayid <- Sys.getenv('SLURM_ARRAY_TASK_ID')
 
-data_dir <- "U:/Documents/jelo/hydra/"
-model_dir <- "U:/Documents/repos/jelo/R/"
-results_dir <- "G:/irena/jelo/"
-seed = 220
+taskid <- as.numeric(slurm_arrayid)
+seed = taskid + 128
 #setwd("/home/irena/")
 ## set up the data simulation parameters:
 P = 2 # no of basis functions
+P_Si = 2
+data_dir <- "U:/Documents/repos/joint_longitudinal_models/R/one_predictor/joint_model/"
+model_dir <- "U:/Documents/repos/jelo/R/time_varying_variance/"
+results_dir <- "G:/irena/tvv/"
 
-model_data <- read.csv(paste0(data_dir, "prepped_bmd_e2_data_06042024.csv"))
+model_data <- read.csv(paste0(data_dir, "model_data_01062023.csv"))
 
 ids <- model_data$new_id
 I <- length(unique(ids))
-time_fmp <- cbind(1, model_data$time_fmp_bone)
+time_fmp <- cbind(1, model_data$time_fmp)
 
 other_covs <- cbind(model_data$bmi_std, model_data$age_std) 
 
-x_pred <- model_data$lag_fsh
+x_pred <- model_data$lag_e2
 y <- model_data$bmd_resid
+
+
  
-compiled_model <- stan_model(paste0(model_dir, "joint_model_w_cov.stan"))
+compiled_model <- stan_model(paste0(model_dir, "joint_model_varying_variance.stan"))
 
  ## sample from the model:
-sim_out <- sampling(compiled_model,
-                      sample_file=paste0(results_dir, '0604_fsh_model_samples.csv'), #writes the samples to CSV file
-                      iter = 4000,
-                      warmup=2000, #BURN IN
+bmd_out <- sampling(compiled_model,
+                      sample_file=paste0(results_dir, '_model_samples.csv'), #writes the samples to CSV file
+                      iter = 2000,
+                      warmup=1000, #BURN IN
                       chains =4,
-                      save_warmup=FALSE,
                       seed = seed,
                       control = list(max_treedepth = 60,
                                      adapt_delta=0.99),
                       data = list(
                                   P = P,
+                                  P_Si=P_Si,
                                   I = I,
                                   N = nrow(time_fmp),
                                   id=ids,
@@ -52,3 +57,6 @@ sim_out <- sampling(compiled_model,
                                   )
                     )
 
+
+
+rstan::traceplot(bmd_out, pars=c("S_mu","S_Sigma"))

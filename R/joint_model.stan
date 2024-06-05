@@ -4,13 +4,13 @@ data {
   int<lower=1> N; // no of data points 
   int<lower=1> I; //  no of subjects
   int<lower=1> id[N]; //array of subject ids (length N in order to do the longitudinal estimation)
-  int<lower=1> n_cov;
+  //int<lower=1> n_cov;
   // data for the longitudinal submodel:
   matrix[N, P] f_time; // basis expansion on time 
   vector[N] x_pred; // this should be X_i at time t (Q-length vector of hormone values)
   //data for the outcome submodel:
   vector[N] y;
-  matrix[N,n_cov] other_covariates;
+ // matrix[N,n_cov] other_covariates;
   // Whether or not to evaluate the likelihood
   int<lower = 0, upper = 1> simulate; 
 }
@@ -36,7 +36,7 @@ parameters {
   real beta_B_time; //coefficient for the mean (xhat) with time
   real beta_S_time;
   real<lower=0> outcome_sigma; //parameter for the variance of the outcomes
-  vector[n_cov] phi; 
+ // vector[n_cov] phi; 
 }
 
 transformed parameters{
@@ -60,14 +60,14 @@ model {
   hyper_mu ~ normal(0, 10);
   hyper_sigma ~ cauchy(0,1);
   //priors on outcome coefficients
-   beta_out_int ~ normal(0,1);
-   beta_time_int ~ normal(0,1);
-   beta_B_out ~ normal(0,1);
-   beta_B_time ~ normal(0,1);
-   beta_S_out ~ normal(0,1);
-   beta_S_time ~ normal(0,1);
-   phi ~ normal(0,1);
-   outcome_sigma ~ cauchy(0,1); //weak prior on the sigma for outcome model
+   beta_out_int ~ normal(0,10);
+   beta_time_int ~ normal(0,10);
+   beta_B_out ~ normal(0,10);
+   beta_B_time ~ normal(0,10);
+   beta_S_out ~ normal(0,10);
+   beta_S_time ~ normal(0,10);
+//   phi ~ normal(0,10);
+   outcome_sigma ~ cauchy(0,2.5); //weak prior on the sigma for outcome model
   for(i in 1:I) {
    log_indiv_sigma[i] ~ normal(hyper_mu, hyper_sigma); 
     ran_eff_raw[i] ~ std_normal();
@@ -80,7 +80,7 @@ model {
     for(n in 1:N){
       x_mu[n] = dot_product(B[id[n]], f_time[n,]);
       x_pred[n] ~ normal(x_mu[n], sqrt(indiv_sigma[id[n]]));
-       y_mu[n] =  beta_out_int  + x_mu[n]* beta_B_out + indiv_sigma[id[n]]*beta_S_out +  beta_time_int*f_time[n,2]  + (x_mu[n]* beta_B_time*f_time[n,2]) + indiv_sigma[id[n]]*beta_S_time*f_time[n,2] + dot_product(other_covariates[n,], phi)+ ran_eff[id[n]];
+       y_mu[n] =  beta_out_int  + x_mu[n]* beta_B_out + indiv_sigma[id[n]]*beta_S_out +  beta_time_int*f_time[n,2]  + (x_mu[n]* beta_B_time*f_time[n,2]) + indiv_sigma[id[n]]*beta_S_time*f_time[n,2] + ran_eff[id[n]];
        y[n] ~ normal(y_mu[n], outcome_sigma);
      }
    }
@@ -96,7 +96,7 @@ model {
       for(n in 1:N){ 
         x_mu[n] = dot_product(B[id[n]], f_time[n,]);
         sim_x[n] = normal_rng(x_mu[n], sqrt(indiv_sigma[id[n]]));
-        sim_y_mu[n] =  beta_out_int  + x_mu[n]* beta_B_out + indiv_sigma[id[n]]*beta_S_out +  beta_time_int*f_time[n,2]  + (x_mu[n]* beta_B_time*f_time[n,2]) + indiv_sigma[id[n]]*beta_S_time*f_time[n,2]+ dot_product(other_covariates[n,], phi) + ran_eff[id[n]];
+        sim_y_mu[n] =  beta_out_int  + x_mu[n]* beta_B_out + indiv_sigma[id[n]]*beta_S_out +  beta_time_int*f_time[n,2]  + (x_mu[n]* beta_B_time*f_time[n,2]) + indiv_sigma[id[n]]*beta_S_time*f_time[n,2]+ ran_eff[id[n]];
         sim_y[n] = normal_rng(sim_y_mu[n], outcome_sigma);
    }
  }
